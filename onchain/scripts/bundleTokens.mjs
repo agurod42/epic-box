@@ -79,7 +79,7 @@ const REWARDS_PER_PACK = 3;
 
     for (let i = 0; i < erc721Rewards.length; i += chunkSize) {
       const chunk = erc721Rewards.slice(i, i + chunkSize);
-      if (i === 0 && packBalance === 0) {
+      if (i === 0) {
         console.log(`Creating initial pack with ${chunk.length} ERC721 rewards...`);
         await packContract.create({
           packMetadata: {
@@ -92,7 +92,7 @@ const REWARDS_PER_PACK = 3;
         });
       } else if (chunk.length % REWARDS_PER_PACK === 0) {
         console.log(`Adding chunk of ${chunk.length} ERC721 rewards to the pack...`);
-        const packNfts = await packContract.addPackContents(0, { erc721Rewards: chunk });
+        const packNfts = await packContract.addPackContents(1, { erc721Rewards: chunk });
         console.log(`Added chunk of ${chunk.length} ERC721 rewards to the pack.`);
         console.log(packNfts);
       } else {

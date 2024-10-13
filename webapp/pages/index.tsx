@@ -23,6 +23,7 @@ const LAND_CONTRACT_ADDRESS = "0x5b40f62fe5dd53ec89d82d432c05b9ed79764c5a";
 const PLAYER_CONTRACT_ADDRESS = "0x6f5D7bA06aD7B28319d86fceC09fae5bbC83d32F";
 const SCOUT_CONTRACT_ADDRESS = "0x94E42811Db93EF7831595b6fF9360491B987DFbD";
 
+const PACK_ID = 1;
 const REDEEMER_CONTRACT_ADDRESS = "0xC3B56D45D5e5080C4ef075c2cbc0259D54092424";
 
 const Home: NextPage = () => {
@@ -142,10 +143,10 @@ const Home: NextPage = () => {
 
                         if (index < epicBoxes.length) {
                           console.log("Redeeming ticket for Epic Box.");
-                          await contract.call("redeemTicket", [nft.metadata.id, 0]);
+                          await contract.call("redeemTicket", [nft.metadata.id, PACK_ID]);
                         }
 
-                        const opened = await packContract?.open(0, 1, 4200000);
+                        const opened = await packContract?.open(PACK_ID, 1, 4200000);
 
                         const rewards = opened?.erc721Rewards ?? [];
                         if (rewards.length) {
