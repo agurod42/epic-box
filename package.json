@@ -15,7 +15,9 @@
     "react": "^18.1.0",
     "react-awesome-reveal": "^4.2.12",
     "react-confetti-explosion": "^2.1.2",
-    "react-dom": "^18.1.0"
+    "react-dom": "^18.1.0",
+    "react-use": "^17.5.1",
+    "web3": "^4.13.0"
   },
   "devDependencies": {
     "@types/node": "^17.0.35",

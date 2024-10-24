@@ -7,7 +7,7 @@ const activeChainId = ChainId.Polygon;
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <ThirdwebProvider activeChain={activeChainId} clientId="a8fd5d4d91d0da0f0485ac27da84b578">
+    <ThirdwebProvider activeChain={activeChainId} autoSwitch clientId="a8fd5d4d91d0da0f0485ac27da84b578">
       <Component {...pageProps} />
     </ThirdwebProvider>
   );

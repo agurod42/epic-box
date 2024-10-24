@@ -7,24 +7,26 @@ import {
   useContract,
   useNFT,
   useOwnedNFTs,
-  Web3Button,
+  useSigner,
+  Web3Button
 } from "@thirdweb-dev/react";
 import type { NextPage } from "next";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Zoom } from "react-awesome-reveal";
 import ConfettiExplosion from "react-confetti-explosion";
+import { useDeepCompareEffect } from "react-use";
 
-import { abi as epicBoxRedeemerAbi } from "../abis/EpicBoxRedeemer";
+import { abi as epicBoxRedeemerAbi } from "../abis/EpicBoxOpener";
 
 import styles from "../styles/Home.module.css";
+import { ethers } from "ethers";
 
-const LAND_CONTRACT_ADDRESS = "0x5b40f62fe5dd53ec89d82d432c05b9ed79764c5a";
+const LAND_CONTRACT_ADDRESS = "0x1C80e3D799eBf28E47C488EcdABd7ea47B5d8595";
 const PLAYER_CONTRACT_ADDRESS = "0x6f5D7bA06aD7B28319d86fceC09fae5bbC83d32F";
 const SCOUT_CONTRACT_ADDRESS = "0x94E42811Db93EF7831595b6fF9360491B987DFbD";
 
-const PACK_ID = 1;
-const REDEEMER_CONTRACT_ADDRESS = "0xC3B56D45D5e5080C4ef075c2cbc0259D54092424";
+const OPENER_CONTRACT_ADDRESS = "0x312cC0B8e2b2F81cef459f40F821fcDda6Ab4e67";
 
 const Home: NextPage = () => {
   const address = useAddress();
@@ -33,7 +35,6 @@ const Home: NextPage = () => {
   const [redeemableNfts, setRedeemableNfts] = useState<NFT[]>([]);
   const [rewards, setRewards] = useState<Array<{ tokenId: any, contractAddress: string }> | null>(null);
 
-  const { contract: packContract } = useContract("0x019C38026dE05862ef332cf5A17f245876D15674", "pack");
   const { contract: epicBoxContract } = useContract("0xB7F21E3A4B2B3fD8b897201a2Fb47A973c8E5A2c", "nft-collection");
 
   const landContract = useContract(LAND_CONTRACT_ADDRESS, "nft-collection").contract;
@@ -47,13 +48,12 @@ const Home: NextPage = () => {
   };
 
   const { data: epicBoxes = [], isLoading: isLoadingEpicBoxes } = useOwnedNFTs(epicBoxContract, address);
-  const { data: packs = [], isLoading: isLoadingPacks } = useOwnedNFTs(packContract, address);
 
   const { data: reward1Nft } = useNFT(contractMap[rewards?.[0]?.contractAddress as keyof typeof contractMap], rewards?.[0]?.tokenId as string);
   const { data: reward2Nft } = useNFT(contractMap[rewards?.[1]?.contractAddress as keyof typeof contractMap], rewards?.[1]?.tokenId as string);
   const { data: reward3Nft } = useNFT(contractMap[rewards?.[2]?.contractAddress as keyof typeof contractMap], rewards?.[2]?.tokenId as string);
 
-  const isLoading = isLoadingEpicBoxes || isLoadingPacks;
+  const isLoading = isLoadingEpicBoxes;
 
   useEffect(() => {
     if (rewards?.find((reward) => reward.tokenId == reward1Nft?.metadata.id) && reward1Nft) {
@@ -62,12 +62,19 @@ const Home: NextPage = () => {
     }
   }, [rewards, reward1Nft, reward2Nft, reward3Nft]);
 
-  useEffect(() => {
+  console.log("rewards", rewards);
+  console.log("reward1Nft", reward1Nft);
+  console.log("reward2Nft", reward2Nft);
+  console.log("reward3Nft", reward3Nft);
+  console.log("isOpening", isOpening);
+  console.log("epicBoxes", epicBoxes);
+
+  useDeepCompareEffect(() => {
     if (!isOpening) {
       console.log("Not opening. Setting redeemable NFTs.");
-      setRedeemableNfts([...epicBoxes, ...packs]);
+      setRedeemableNfts(epicBoxes);
     }
-  }, [isOpening, epicBoxes, packs])
+  }, [isOpening, epicBoxes])
 
   if (!address) {
     console.log("No address found. Rendering ConnectEmbed.");
@@ -126,13 +133,14 @@ const Home: NextPage = () => {
                   <h3>{nft.metadata.name}</h3>
 
                   <Web3Button
-                    contractAddress={REDEEMER_CONTRACT_ADDRESS}
+                    contractAddress={OPENER_CONTRACT_ADDRESS}
                     contractAbi={epicBoxRedeemerAbi}
                     action={async (contract) => {
                       try {
                         console.log("Opening NFT with metadata id:", nft.metadata.id);
                         const contractAddress = contract.getAddress();
-                        
+
+                        // Check and set approval if necessary
                         const isApproved = await epicBoxContract!.isApproved(address, contractAddress);
                         if (!isApproved) {
                           console.log("Contract not approved. Setting approval for all.");
@@ -143,15 +151,30 @@ const Home: NextPage = () => {
 
                         if (index < epicBoxes.length) {
                           console.log("Redeeming ticket for Epic Box.");
-                          await contract.call("redeemTicket", [nft.metadata.id, PACK_ID]);
-                        }
+                          const tx = await contract.call("burnEpicBoxAndMintAssets", [nft.metadata.id], { gasLimit: 5000000, value: ethers.utils.parseEther("0") });
+                          console.log(tx);
+                          const receipt = await tx.wait();
 
-                        const opened = await packContract?.open(PACK_ID, 1, 4200000);
+                          // Parse the transaction receipt to extract events
+                          const rewards = [];
 
-                        const rewards = opened?.erc721Rewards ?? [];
-                        if (rewards.length) {
-                          console.log("Rewards received:", rewards);
-                          setRewards(rewards);
+                          for (const event of receipt.events) {
+                            if (event.event === "PlayerMinted") {
+                              const playerId = event.args.playerId.toString();
+                              rewards.push({ tokenId: playerId, contractAddress: PLAYER_CONTRACT_ADDRESS });
+                            } else if (event.event === "ScoutMinted") {
+                              const scoutId = event.args.scoutId.toString();
+                              rewards.push({ tokenId: scoutId, contractAddress: SCOUT_CONTRACT_ADDRESS });
+                            } else if (event.event === "LandTicketTransferred") {
+                              const landTicketId = event.args.landTicketId.toString();
+                              rewards.push({ tokenId: landTicketId, contractAddress: LAND_CONTRACT_ADDRESS });
+                            }
+                          }
+
+                          if (rewards.length) {
+                            console.log("Rewards received:", rewards);
+                            setRewards(rewards);
+                          }
                         }
                       } catch (err: any) {
                         console.error("Error opening NFT:", err.message ?? "Unknown error");
