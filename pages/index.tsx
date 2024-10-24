@@ -217,8 +217,8 @@ const Home: NextPage = () => {
           <Zoom>
             <ConfettiExplosion particleCount={300} />
             <div className={styles.nftBoxSmallGrid}>
-              <div className={styles.nftBox}>
-                {reward1Nft && (
+              {reward1Nft && (
+                <div className={styles.nftBox}>
                   <>
                     <ThirdwebNftMedia
                       metadata={{
@@ -233,10 +233,10 @@ const Home: NextPage = () => {
                       <button className={styles.button}>View on OpenSea</button>
                     </a>
                   </>
-                )}
-              </div>
-              <div className={styles.nftBox}>
-                {reward2Nft && (
+                </div>
+              )}
+              {reward2Nft && (
+                <div className={styles.nftBox}>
                   <>
                     <ThirdwebNftMedia
                       metadata={{
@@ -251,10 +251,10 @@ const Home: NextPage = () => {
                       <button className={styles.button}>View on OpenSea</button>
                     </a>
                   </>
-                )}
-              </div>
-              <div className={styles.nftBox}>
-                {reward3Nft && (
+                </div>
+              )}
+              {reward3Nft && (
+                <div className={styles.nftBox}>
                   <>
                     <ThirdwebNftMedia
                       metadata={{
@@ -269,10 +269,10 @@ const Home: NextPage = () => {
                       <button className={styles.button}>View on OpenSea</button>
                     </a>
                   </>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-            <h3>Congrats! You got three amazing rewards!</h3>
+            <h3>Congrats! You got amazing rewards!</h3>
           </Zoom>
         </div>
       )}
