@@ -7,9 +7,10 @@ import {
   useContract,
   useNFT,
   useOwnedNFTs,
-  useSigner,
   Web3Button
 } from "@thirdweb-dev/react";
+import { ethers } from "ethers";
+import { Interface } from "ethers/lib/utils";
 import type { NextPage } from "next";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -17,16 +18,17 @@ import { Zoom } from "react-awesome-reveal";
 import ConfettiExplosion from "react-confetti-explosion";
 import { useDeepCompareEffect } from "react-use";
 
-import { abi as epicBoxRedeemerAbi } from "../abis/EpicBoxOpener";
+import { abi as epicBoxOpenerAbi } from "../abis/EpicBoxOpener";
 
 import styles from "../styles/Home.module.css";
-import { ethers } from "ethers";
 
 const LAND_CONTRACT_ADDRESS = "0x1C80e3D799eBf28E47C488EcdABd7ea47B5d8595";
 const PLAYER_CONTRACT_ADDRESS = "0x6f5D7bA06aD7B28319d86fceC09fae5bbC83d32F";
 const SCOUT_CONTRACT_ADDRESS = "0x94E42811Db93EF7831595b6fF9360491B987DFbD";
 
 const OPENER_CONTRACT_ADDRESS = "0x312cC0B8e2b2F81cef459f40F821fcDda6Ab4e67";
+
+const epicBoxOpenerInterface = new Interface(epicBoxOpenerAbi);
 
 const Home: NextPage = () => {
   const address = useAddress();
@@ -134,7 +136,7 @@ const Home: NextPage = () => {
 
                   <Web3Button
                     contractAddress={OPENER_CONTRACT_ADDRESS}
-                    contractAbi={epicBoxRedeemerAbi}
+                    contractAbi={epicBoxOpenerAbi}
                     action={async (contract) => {
                       try {
                         console.log("Opening NFT with metadata id:", nft.metadata.id);
@@ -151,29 +153,35 @@ const Home: NextPage = () => {
 
                         if (index < epicBoxes.length) {
                           console.log("Redeeming ticket for Epic Box.");
-                          const tx = await contract.call("burnEpicBoxAndMintAssets", [nft.metadata.id], { gasLimit: 5000000, value: ethers.utils.parseEther("0") });
-                          console.log(tx);
-                          const receipt = await tx.wait();
+                          // Inside the action of Web3Button
+                          const tx = await contract.call("burnEpicBoxAndMintAssets", [nft.metadata.id], { gasLimit: 10000000, value: ethers.utils.parseEther("0") });
+                          console.log(tx.receipt.logs);
 
                           // Parse the transaction receipt to extract events
                           const rewards = [];
 
-                          for (const event of receipt.events) {
-                            if (event.event === "PlayerMinted") {
-                              const playerId = event.args.playerId.toString();
-                              rewards.push({ tokenId: playerId, contractAddress: PLAYER_CONTRACT_ADDRESS });
-                            } else if (event.event === "ScoutMinted") {
-                              const scoutId = event.args.scoutId.toString();
-                              rewards.push({ tokenId: scoutId, contractAddress: SCOUT_CONTRACT_ADDRESS });
-                            } else if (event.event === "LandTicketTransferred") {
-                              const landTicketId = event.args.landTicketId.toString();
-                              rewards.push({ tokenId: landTicketId, contractAddress: LAND_CONTRACT_ADDRESS });
+                          for (const log of tx.receipt.logs) {
+                            // Define the topics you are interested in and decode the logs accordingly
+                            if (log.address.toLowerCase() === OPENER_CONTRACT_ADDRESS.toLowerCase()) {
+                              const decodedLog = epicBoxOpenerInterface.parseLog(log);
+                              if (decodedLog.name === "PlayerMinted") {
+                                const playerId = decodedLog.args.playerId.toString();
+                                rewards.push({ tokenId: playerId, contractAddress: PLAYER_CONTRACT_ADDRESS });
+                              } else if (decodedLog.name === "ScoutMinted") {
+                                const scoutId = decodedLog.args.scoutId.toString();
+                                rewards.push({ tokenId: scoutId, contractAddress: SCOUT_CONTRACT_ADDRESS });
+                              } else if (decodedLog.name === "LandTicketTransferred") {
+                                const landTicketId = decodedLog.args.landTicketId.toString();
+                                rewards.push({ tokenId: landTicketId, contractAddress: LAND_CONTRACT_ADDRESS });
+                              }
                             }
                           }
 
                           if (rewards.length) {
                             console.log("Rewards received:", rewards);
                             setRewards(rewards);
+                          } else {
+                            console.error("No rewards found in transaction logs.");
                           }
                         }
                       } catch (err: any) {
