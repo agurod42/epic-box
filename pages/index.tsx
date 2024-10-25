@@ -1,3 +1,4 @@
+import { ChainName, networkConfig } from "@playmetasoccer/constants";
 import {
   ConnectEmbed,
   ConnectWallet,
@@ -7,8 +8,9 @@ import {
   useContract,
   useNFT,
   useOwnedNFTs,
-  Web3Button
+  Web3Button,
 } from "@thirdweb-dev/react";
+import axios from "axios";
 import { ethers } from "ethers";
 import { Interface } from "ethers/lib/utils";
 import type { NextPage } from "next";
@@ -22,113 +24,275 @@ import { abi as epicBoxOpenerAbi } from "../abis/EpicBoxOpener";
 
 import styles from "../styles/Home.module.css";
 
+// Contract addresses
 const LAND_CONTRACT_ADDRESS = "0x1C80e3D799eBf28E47C488EcdABd7ea47B5d8595";
 const PLAYER_CONTRACT_ADDRESS = "0x6f5D7bA06aD7B28319d86fceC09fae5bbC83d32F";
 const SCOUT_CONTRACT_ADDRESS = "0x94E42811Db93EF7831595b6fF9360491B987DFbD";
-
 const OPENER_CONTRACT_ADDRESS = "0x312cC0B8e2b2F81cef459f40F821fcDda6Ab4e67";
 
+// Interface for EpicBoxOpener
 const epicBoxOpenerInterface = new Interface(epicBoxOpenerAbi);
+
+// Helper functions
+const getAssetType = (contractAddress: string) => {
+  switch (contractAddress) {
+    case LAND_CONTRACT_ADDRESS:
+      return "Land";
+    case PLAYER_CONTRACT_ADDRESS:
+      return "Player";
+    case SCOUT_CONTRACT_ADDRESS:
+      return "Scout";
+    default:
+      return "Unknown";
+  }
+};
+
+const getOpenSeaLink = (contractAddress: string, tokenId: string) => {
+  return `https://opensea.io/assets/matic/${contractAddress}/${tokenId}`;
+};
+
+const getPlayer = async (chainName: ChainName, nftTokenId: number): Promise<any> => {
+  const query = `
+    {
+      players(where: { id_eq: "${nftTokenId}" }) {
+        id
+        owner
+        blockHash
+        transactionIndex
+      }
+    }
+  `;
+
+  const response = await axios.post(
+    `${networkConfig[chainName].blockchainSquidEndpoint}/api/graphql`,
+    { query }
+  );
+  const playerEntities: any[] = response.data.data.players;
+
+  if (playerEntities.length === 0) {
+    throw new Error(
+      `No player entity found for player with token ID ${nftTokenId} on chain ${chainName}.`
+    );
+  }
+
+  if (playerEntities.length > 1) {
+    throw new Error(
+      `Multiple player entities found for player with token ID ${nftTokenId} on chain ${chainName}.`
+    );
+  }
+
+  return playerEntities[0];
+};
+
+const getScout = async (chainName: ChainName, nftTokenId: number): Promise<any> => {
+  const query = `
+    {
+      scouts(where: { id_eq: "${nftTokenId}" }) {
+        id
+        owner
+        blockHash
+        transactionIndex
+      }
+    }
+  `;
+
+  const response = await axios.post(
+    `${networkConfig[chainName].blockchainSquidEndpoint}/api/graphql`,
+    { query }
+  );
+  const scoutEntities: any[] = response.data.data.scouts;
+
+  if (scoutEntities.length === 0) {
+    throw new Error(
+      `No scout entity found for scout with token ID ${nftTokenId} on chain ${chainName}.`
+    );
+  }
+
+  if (scoutEntities.length > 1) {
+    throw new Error(
+      `Multiple scout entities found for scout with token ID ${nftTokenId} on chain ${chainName}.`
+    );
+  }
+
+  return scoutEntities[0];
+};
+
+const fetchPlayerWithRetry = async (
+  chainName: ChainName,
+  nftTokenId: number,
+  retries = 90,
+  delay = 1000
+): Promise<any> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const playerFromSquid = await getPlayer(chainName, nftTokenId);
+      console.log("Player data:", playerFromSquid);
+      await syncPlayer(chainName, nftTokenId);
+      return playerFromSquid;
+    } catch (error: any) {
+      console.error(`Attempt ${i + 1} failed: ${error.message ?? "Unknown error"}`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error(`Failed to fetch player after ${retries} attempts`);
+};
+
+const fetchScoutWithRetry = async (
+  chainName: ChainName,
+  nftTokenId: number,
+  retries = 90,
+  delay = 1000
+): Promise<any> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const scoutFromSquid = await getScout(chainName, nftTokenId);
+      console.log("Scout data:", scoutFromSquid);
+      await syncScout(chainName, nftTokenId);
+      return scoutFromSquid;
+    } catch (error: any) {
+      console.error(`Attempt ${i + 1} failed: ${error.message ?? "Unknown error"}`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error(`Failed to fetch player after ${retries} attempts`);
+};
+
+const syncPlayer = async (chainName: ChainName, playerNftId: number): Promise<void> => {
+  try {
+    await axios.post(
+      "https://manag3r.metasoccer.com/api/2024/blockchain/syncPlayer",
+      {
+        chainName,
+        playerNftId,
+      },
+      {
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  } catch (error: any) {
+    console.error("Error syncing player:", error.message ?? "Unknown error");
+    throw new Error(error.message ?? "Failed to sync player");
+  }
+};
+
+const syncScout = async (chainName: ChainName, scoutNftId: number): Promise<void> => {
+  try {
+    await axios.post(
+      "https://manag3r.metasoccer.com/api/2024/blockchain/syncScout",
+      {
+        chainName,
+        scoutNftId,
+      },
+      {
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  } catch (error: any) {
+    console.error("Error syncing scout:", error.message ?? "Unknown error");
+    throw new Error(error.message ?? "Failed to sync scout");
+  }
+};
 
 const Home: NextPage = () => {
   const address = useAddress();
-
   const [isOpening, setIsOpening] = useState(false);
   const [redeemableNfts, setRedeemableNfts] = useState<NFT[]>([]);
-  const [rewards, setRewards] = useState<Array<{ tokenId: any, contractAddress: string }> | null>(null);
+  const [rewards, setRewards] = useState<Array<{ tokenId: string; contractAddress: string }> | null>(
+    null
+  );
 
-  const { contract: epicBoxContract } = useContract("0xB7F21E3A4B2B3fD8b897201a2Fb47A973c8E5A2c", "nft-collection");
-
-  const landContract = useContract(LAND_CONTRACT_ADDRESS, "nft-collection").contract;
-  const playerContract = useContract(PLAYER_CONTRACT_ADDRESS, "nft-collection").contract;
-  const scoutContract = useContract(SCOUT_CONTRACT_ADDRESS, "nft-collection").contract;
+  // Contracts
+  const { contract: epicBoxContract } = useContract(
+    "0xB7F21E3A4B2B3fD8b897201a2Fb47A973c8E5A2c",
+    "nft-collection"
+  );
+  const { contract: landContract } = useContract(LAND_CONTRACT_ADDRESS, "nft-collection");
+  const { contract: playerContract } = useContract(PLAYER_CONTRACT_ADDRESS, "nft-collection");
+  const { contract: scoutContract } = useContract(SCOUT_CONTRACT_ADDRESS, "nft-collection");
 
   const contractMap = {
     [LAND_CONTRACT_ADDRESS]: landContract,
     [PLAYER_CONTRACT_ADDRESS]: playerContract,
-    [SCOUT_CONTRACT_ADDRESS]: scoutContract
+    [SCOUT_CONTRACT_ADDRESS]: scoutContract,
   };
 
-  const { data: epicBoxes = [], isLoading: isLoadingEpicBoxes } = useOwnedNFTs(epicBoxContract, address);
-
-  const { data: reward1Nft } = useNFT(contractMap[rewards?.[0]?.contractAddress as keyof typeof contractMap], rewards?.[0]?.tokenId as string);
-  const { data: reward2Nft } = useNFT(contractMap[rewards?.[1]?.contractAddress as keyof typeof contractMap], rewards?.[1]?.tokenId as string);
-  const { data: reward3Nft } = useNFT(contractMap[rewards?.[2]?.contractAddress as keyof typeof contractMap], rewards?.[2]?.tokenId as string);
+  // Data fetching
+  const { data: epicBoxes = [], isLoading: isLoadingEpicBoxes } = useOwnedNFTs(
+    epicBoxContract,
+    address
+  );
+  const { data: reward1Nft } = useNFT(
+    contractMap[rewards?.[0]?.contractAddress as keyof typeof contractMap],
+    rewards?.[0]?.tokenId
+  );
+  const { data: reward2Nft } = useNFT(
+    contractMap[rewards?.[1]?.contractAddress as keyof typeof contractMap],
+    rewards?.[1]?.tokenId
+  );
+  const { data: reward3Nft } = useNFT(
+    contractMap[rewards?.[2]?.contractAddress as keyof typeof contractMap],
+    rewards?.[2]?.tokenId
+  );
 
   const isLoading = isLoadingEpicBoxes;
 
   useEffect(() => {
-    if (rewards?.find((reward) => reward.tokenId == reward1Nft?.metadata.id) && reward1Nft) {
-      console.log("Reward tokenId matches landNft metadata id. Stopping opening process.");
-      setIsOpening(false);
+    if (rewards && reward1Nft) {
+      if (rewards.find((reward) => reward.tokenId === reward1Nft.metadata.id)) {
+        console.log("Reward tokenId matches reward1Nft metadata id. Stopping opening process.");
+        setIsOpening(false);
+      }
     }
-  }, [rewards, reward1Nft, reward2Nft, reward3Nft]);
-
-  console.log("rewards", rewards);
-  console.log("reward1Nft", reward1Nft);
-  console.log("reward2Nft", reward2Nft);
-  console.log("reward3Nft", reward3Nft);
-  console.log("isOpening", isOpening);
-  console.log("epicBoxes", epicBoxes);
+  }, [rewards, reward1Nft]);
 
   useDeepCompareEffect(() => {
     if (!isOpening) {
       console.log("Not opening. Setting redeemable NFTs.");
       setRedeemableNfts(epicBoxes);
     }
-  }, [isOpening, epicBoxes])
+  }, [isOpening, epicBoxes]);
 
   if (!address) {
     console.log("No address found. Rendering ConnectEmbed.");
     return (
       <div className={styles.container} style={{ marginTop: 0 }}>
         <div className={styles.collectionContainer}>
-          <ConnectEmbed
-            showThirdwebBranding={false}  
-          />
+          <ConnectEmbed showThirdwebBranding={false} />
 
-          <div className={styles.footer}>
-            Made with &lt;3 for MetaSoccer&apos;s community
-          </div>
+          <div className={styles.footer}>Made with &lt;3 for MetaSoccer&apos;s community</div>
 
           <div className={styles.header}>
-            <Image alt="MetaSoccer" src="https://assets.metasoccer.com/metasoccer-logo.svg" height={24} width={120} className={styles.logo} />
+            <Image
+              alt="MetaSoccer"
+              src="https://assets.metasoccer.com/metasoccer-logo.svg"
+              height={24}
+              width={120}
+              className={styles.logo}
+            />
           </div>
         </div>
       </div>
     );
   }
 
-  const getAssetType = (contractAddress: string) => {
-    switch (contractAddress) {
-      case LAND_CONTRACT_ADDRESS:
-        return "Land";
-      case PLAYER_CONTRACT_ADDRESS:
-        return "Player";
-      case SCOUT_CONTRACT_ADDRESS:
-        return "Scout";
-      default:
-        return "Unknown";
-    }
-  };
-
-  const getOpenSeaLink = (contractAddress: string, tokenId: string) => {
-    return `https://opensea.io/assets/matic/${contractAddress}/${tokenId}`;
-  };
-
   return (
     <div className={styles.container} style={{ marginTop: 0 }}>
       <div className={styles.collectionContainer}>
         {!isLoading ? (
-          ((redeemableNfts?.length ?? 0) > 0) ? (
+          (redeemableNfts?.length ?? 0) > 0 ? (
             <div className={styles.nftBoxGrid}>
-              {redeemableNfts?.map((nft, index) => (
+              {redeemableNfts.map((nft, index) => (
                 <div className={styles.nftBox} key={nft.metadata.id.toString()}>
                   <ThirdwebNftMedia
-                    // @ts-ignore
                     metadata={{
                       ...nft.metadata,
-                      image: `${nft.metadata.image}`,
+                      image: nft.metadata.image,
                     }}
                     className={styles.nftMedia}
                   />
@@ -153,22 +317,24 @@ const Home: NextPage = () => {
 
                         if (index < epicBoxes.length) {
                           console.log("Redeeming ticket for Epic Box.");
-                          // Inside the action of Web3Button
-                          const tx = await contract.call("burnEpicBoxAndMintAssets", [nft.metadata.id], { gasLimit: 10000000, value: ethers.utils.parseEther("0") });
-                          console.log(tx.receipt.logs);
+                          const tx = await contract.call("burnEpicBoxAndMintAssets", [nft.metadata.id], {
+                            gasLimit: 10000000,
+                            value: ethers.utils.parseEther("0"),
+                          });
 
                           // Parse the transaction receipt to extract events
-                          const rewards = [];
+                          const rewards: Array<{ tokenId: string; contractAddress: string }> = [];
 
                           for (const log of tx.receipt.logs) {
-                            // Define the topics you are interested in and decode the logs accordingly
                             if (log.address.toLowerCase() === OPENER_CONTRACT_ADDRESS.toLowerCase()) {
                               const decodedLog = epicBoxOpenerInterface.parseLog(log);
                               if (decodedLog.name === "PlayerMinted") {
                                 const playerId = decodedLog.args.playerId.toString();
+                                await fetchPlayerWithRetry("polygon", parseInt(playerId, 10));
                                 rewards.push({ tokenId: playerId, contractAddress: PLAYER_CONTRACT_ADDRESS });
                               } else if (decodedLog.name === "ScoutMinted") {
                                 const scoutId = decodedLog.args.scoutId.toString();
+                                await fetchScoutWithRetry("polygon", parseInt(scoutId, 10));
                                 rewards.push({ tokenId: scoutId, contractAddress: SCOUT_CONTRACT_ADDRESS });
                               } else if (decodedLog.name === "LandTicketTransferred") {
                                 const landTicketId = decodedLog.args.landTicketId.toString();
@@ -202,12 +368,16 @@ const Home: NextPage = () => {
           <p>Loading...</p>
         )}
 
-        <div className={styles.footer}>
-          Made with &lt;3 for MetaSoccer&apos;s community
-        </div>
+        <div className={styles.footer}>Made with &lt;3 for MetaSoccer&apos;s community</div>
 
         <div className={styles.header}>
-          <Image alt="MetaSoccer" src="https://assets.metasoccer.com/metasoccer-logo.svg" height={24} width={120} className={styles.logo} />
+          <Image
+            alt="MetaSoccer"
+            src="https://assets.metasoccer.com/metasoccer-logo.svg"
+            height={24}
+            width={120}
+            className={styles.logo}
+          />
           <ConnectWallet />
         </div>
       </div>
@@ -219,56 +389,62 @@ const Home: NextPage = () => {
             <div className={styles.nftBoxSmallGrid}>
               {reward1Nft && (
                 <div className={styles.nftBox}>
-                  <>
-                    <ThirdwebNftMedia
-                      metadata={{
-                        ...reward1Nft.metadata,
-                        image: `${reward1Nft.metadata.image}`,
-                      }}
-                      className={styles.nftMedia}
-                    />
-                    <h3>{reward1Nft.metadata.name}</h3>
-                    <p>{getAssetType(rewards[0].contractAddress)}</p>
-                    <a href={getOpenSeaLink(rewards[0].contractAddress, rewards[0].tokenId)} target="_blank" rel="noopener noreferrer">
-                      <button className={styles.button}>View on OpenSea</button>
-                    </a>
-                  </>
+                  <ThirdwebNftMedia
+                    metadata={{
+                      ...reward1Nft.metadata,
+                      image: reward1Nft.metadata.image,
+                    }}
+                    className={styles.nftMedia}
+                  />
+                  <h3>{reward1Nft.metadata.name}</h3>
+                  <p>{getAssetType(rewards[0].contractAddress)}</p>
+                  <a
+                    href={getOpenSeaLink(rewards[0].contractAddress, rewards[0].tokenId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <button className={styles.button}>View on OpenSea</button>
+                  </a>
                 </div>
               )}
               {reward2Nft && (
                 <div className={styles.nftBox}>
-                  <>
-                    <ThirdwebNftMedia
-                      metadata={{
-                        ...reward2Nft.metadata,
-                        image: `${reward2Nft.metadata.image}`,
-                      }}
-                      className={styles.nftMedia}
-                    />
-                    <h3>{reward2Nft.metadata.name}</h3>
-                    <p>{getAssetType(rewards[1].contractAddress)}</p>
-                    <a href={getOpenSeaLink(rewards[1].contractAddress, rewards[1].tokenId)} target="_blank" rel="noopener noreferrer">
-                      <button className={styles.button}>View on OpenSea</button>
-                    </a>
-                  </>
+                  <ThirdwebNftMedia
+                    metadata={{
+                      ...reward2Nft.metadata,
+                      image: reward2Nft.metadata.image,
+                    }}
+                    className={styles.nftMedia}
+                  />
+                  <h3>{reward2Nft.metadata.name}</h3>
+                  <p>{getAssetType(rewards[1].contractAddress)}</p>
+                  <a
+                    href={getOpenSeaLink(rewards[1].contractAddress, rewards[1].tokenId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <button className={styles.button}>View on OpenSea</button>
+                  </a>
                 </div>
               )}
               {reward3Nft && (
                 <div className={styles.nftBox}>
-                  <>
-                    <ThirdwebNftMedia
-                      metadata={{
-                        ...reward3Nft.metadata,
-                        image: `${reward3Nft.metadata.image}`,
-                      }}
-                      className={styles.nftMedia}
-                    />
-                    <h3>{reward3Nft.metadata.name}</h3>
-                    <p>{getAssetType(rewards[2].contractAddress)}</p>
-                    <a href={getOpenSeaLink(rewards[2].contractAddress, rewards[2].tokenId)} target="_blank" rel="noopener noreferrer">
-                      <button className={styles.button}>View on OpenSea</button>
-                    </a>
-                  </>
+                  <ThirdwebNftMedia
+                    metadata={{
+                      ...reward3Nft.metadata,
+                      image: reward3Nft.metadata.image,
+                    }}
+                    className={styles.nftMedia}
+                  />
+                  <h3>{reward3Nft.metadata.name}</h3>
+                  <p>{getAssetType(rewards[2].contractAddress)}</p>
+                  <a
+                    href={getOpenSeaLink(rewards[2].contractAddress, rewards[2].tokenId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <button className={styles.button}>View on OpenSea</button>
+                  </a>
                 </div>
               )}
             </div>
