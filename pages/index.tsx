@@ -172,8 +172,8 @@ const syncPlayer = async (chainName: ChainName, playerNftId: number): Promise<vo
         },
       }
     );
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // wait 3 seconds before returning
   } catch (error: any) {
-    console.error("Error syncing player:", error.message ?? "Unknown error");
     throw new Error(error.message ?? "Failed to sync player");
   }
 };
@@ -193,6 +193,7 @@ const syncScout = async (chainName: ChainName, scoutNftId: number): Promise<void
         },
       }
     );
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // wait 3 seconds before returning
   } catch (error: any) {
     console.error("Error syncing scout:", error.message ?? "Unknown error");
     throw new Error(error.message ?? "Failed to sync scout");
