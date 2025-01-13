@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "mint": "node scripts/mintEpicBoxes.js",
+    "start": "next start"
   },
   "dependencies": {
     "@playmetasoccer/constants": "^1.0.8",
