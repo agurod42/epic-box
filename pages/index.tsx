@@ -5,10 +5,11 @@ import {
   NFT,
   ThirdwebNftMedia,
   useAddress,
+  useChainId,
   useContract,
   useNFT,
   useOwnedNFTs,
-  Web3Button,
+  Web3Button
 } from "@thirdweb-dev/react";
 import axios from "axios";
 import { ethers } from "ethers";
@@ -24,23 +25,38 @@ import { abi as epicBoxOpenerAbi } from "../abis/EpicBoxOpener";
 
 import styles from "../styles/Home.module.css";
 
-// Contract addresses
-const LAND_CONTRACT_ADDRESS = "0x1C80e3D799eBf28E47C488EcdABd7ea47B5d8595";
-const PLAYER_CONTRACT_ADDRESS = "0x6f5D7bA06aD7B28319d86fceC09fae5bbC83d32F";
-const SCOUT_CONTRACT_ADDRESS = "0x94E42811Db93EF7831595b6fF9360491B987DFbD";
-const OPENER_CONTRACT_ADDRESS = "0x312cC0B8e2b2F81cef459f40F821fcDda6Ab4e67";
+// Contract addresses by chain
+const CONTRACT_ADDRESSES = {
+  51: { // XDC dev
+    LAND: "0x6555C9C746A6AC399aCb8016B5B7B4CfA1900af9",
+    PLAYER: "0xb06d1503afF4B8F744DE13226c65A2d7362a7b1B",
+    SCOUT: "0xa2A47D5F9436e111c8dEDC02890acf14E9F25D1a",
+    OPENER: "0x3454470C5564eE8d093084b1114c2C6F79Bf7607",
+    EPIC_BOX: "0xD3E94014563731e41E7Aed1f8b1f55DD7501271A"
+  },
+  137: { // Polygon
+    LAND: "0x1C80e3D799eBf28E47C488EcdABd7ea47B5d8595",
+    PLAYER: "0x6f5D7bA06aD7B28319d86fceC09fae5bbC83d32F",
+    SCOUT: "0x94E42811Db93EF7831595b6fF9360491B987DFbD",
+    OPENER: "0x312cC0B8e2b2F81cef459f40F821fcDda6Ab4e67",
+    EPIC_BOX: "0xB7F21E3A4B2B3fD8b897201a2Fb47A973c8E5A2c"
+  }
+};
 
 // Interface for EpicBoxOpener
 const epicBoxOpenerInterface = new Interface(epicBoxOpenerAbi);
 
 // Helper functions
-const getAssetType = (contractAddress: string) => {
+const getAssetType = (contractAddress: string, chainId: number) => {
+  const addresses = CONTRACT_ADDRESSES[chainId as keyof typeof CONTRACT_ADDRESSES];
+  if (!addresses) return "Unknown";
+
   switch (contractAddress) {
-    case LAND_CONTRACT_ADDRESS:
+    case addresses.LAND:
       return "Land";
-    case PLAYER_CONTRACT_ADDRESS:
+    case addresses.PLAYER:
       return "Player";
-    case SCOUT_CONTRACT_ADDRESS:
+    case addresses.SCOUT:
       return "Scout";
     default:
       return "Unknown";
@@ -202,26 +218,30 @@ const syncScout = async (chainName: ChainName, scoutNftId: number): Promise<void
 
 const Home: NextPage = () => {
   const address = useAddress();
+  const chainId = useChainId();
+
   const [isOpening, setIsOpening] = useState(false);
   const [redeemableNfts, setRedeemableNfts] = useState<NFT[]>([]);
   const [rewards, setRewards] = useState<Array<{ tokenId: string; contractAddress: string }> | null>(
     null
   );
 
+  const addresses = chainId ? CONTRACT_ADDRESSES[chainId as keyof typeof CONTRACT_ADDRESSES] : null;
+
   // Contracts
   const { contract: epicBoxContract } = useContract(
-    "0xB7F21E3A4B2B3fD8b897201a2Fb47A973c8E5A2c",
+    addresses?.EPIC_BOX,
     "nft-collection"
   );
-  const { contract: landContract } = useContract(LAND_CONTRACT_ADDRESS, "nft-collection");
-  const { contract: playerContract } = useContract(PLAYER_CONTRACT_ADDRESS, "nft-collection");
-  const { contract: scoutContract } = useContract(SCOUT_CONTRACT_ADDRESS, "nft-collection");
+  const { contract: landContract } = useContract(addresses?.LAND, "nft-collection");
+  const { contract: playerContract } = useContract(addresses?.PLAYER, "nft-collection");
+  const { contract: scoutContract } = useContract(addresses?.SCOUT, "nft-collection");
 
-  const contractMap = {
-    [LAND_CONTRACT_ADDRESS]: landContract,
-    [PLAYER_CONTRACT_ADDRESS]: playerContract,
-    [SCOUT_CONTRACT_ADDRESS]: scoutContract,
-  };
+  const contractMap = addresses ? {
+    [addresses.LAND]: landContract,
+    [addresses.PLAYER]: playerContract,
+    [addresses.SCOUT]: scoutContract,
+  } : {};
 
   // Data fetching
   const { data: epicBoxes = [], isLoading: isLoadingEpicBoxes } = useOwnedNFTs(
@@ -282,6 +302,14 @@ const Home: NextPage = () => {
     );
   }
 
+  if (!addresses) {
+    return (
+      <div className={styles.container}>
+        <p>Please connect to a supported network (Polygon or Mumbai)</p>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container} style={{ marginTop: 0 }}>
       <div className={styles.collectionContainer}>
@@ -300,7 +328,7 @@ const Home: NextPage = () => {
                   <h3>{nft.metadata.name}</h3>
 
                   <Web3Button
-                    contractAddress={OPENER_CONTRACT_ADDRESS}
+                    contractAddress={addresses.OPENER}
                     contractAbi={epicBoxOpenerAbi}
                     action={async (contract) => {
                       try {
@@ -327,19 +355,19 @@ const Home: NextPage = () => {
                           const rewards: Array<{ tokenId: string; contractAddress: string }> = [];
 
                           for (const log of tx.receipt.logs) {
-                            if (log.address.toLowerCase() === OPENER_CONTRACT_ADDRESS.toLowerCase()) {
+                            if (log.address.toLowerCase() === addresses.OPENER.toLowerCase()) {
                               const decodedLog = epicBoxOpenerInterface.parseLog(log);
                               if (decodedLog.name === "PlayerMinted") {
                                 const playerId = decodedLog.args.playerId.toString();
                                 await fetchPlayerWithRetry("polygon", parseInt(playerId, 10));
-                                rewards.push({ tokenId: playerId, contractAddress: PLAYER_CONTRACT_ADDRESS });
+                                rewards.push({ tokenId: playerId, contractAddress: addresses.PLAYER });
                               } else if (decodedLog.name === "ScoutMinted") {
                                 const scoutId = decodedLog.args.scoutId.toString();
                                 await fetchScoutWithRetry("polygon", parseInt(scoutId, 10));
-                                rewards.push({ tokenId: scoutId, contractAddress: SCOUT_CONTRACT_ADDRESS });
+                                rewards.push({ tokenId: scoutId, contractAddress: addresses.SCOUT });
                               } else if (decodedLog.name === "LandTicketTransferred") {
                                 const landTicketId = decodedLog.args.landTicketId.toString();
-                                rewards.push({ tokenId: landTicketId, contractAddress: LAND_CONTRACT_ADDRESS });
+                                rewards.push({ tokenId: landTicketId, contractAddress: addresses.LAND });
                               }
                             }
                           }
@@ -398,7 +426,7 @@ const Home: NextPage = () => {
                     className={styles.nftMedia}
                   />
                   <h3>{reward1Nft.metadata.name}</h3>
-                  <p>{getAssetType(rewards[0].contractAddress)}</p>
+                  <p>{getAssetType(rewards[0].contractAddress, chainId!)}</p>
                   <a
                     href={getOpenSeaLink(rewards[0].contractAddress, rewards[0].tokenId)}
                     target="_blank"
@@ -418,7 +446,7 @@ const Home: NextPage = () => {
                     className={styles.nftMedia}
                   />
                   <h3>{reward2Nft.metadata.name}</h3>
-                  <p>{getAssetType(rewards[1].contractAddress)}</p>
+                  <p>{getAssetType(rewards[1].contractAddress, chainId!)}</p>
                   <a
                     href={getOpenSeaLink(rewards[1].contractAddress, rewards[1].tokenId)}
                     target="_blank"
@@ -438,7 +466,7 @@ const Home: NextPage = () => {
                     className={styles.nftMedia}
                   />
                   <h3>{reward3Nft.metadata.name}</h3>
-                  <p>{getAssetType(rewards[2].contractAddress)}</p>
+                  <p>{getAssetType(rewards[2].contractAddress, chainId!)}</p>
                   <a
                     href={getOpenSeaLink(rewards[2].contractAddress, rewards[2].tokenId)}
                     target="_blank"
