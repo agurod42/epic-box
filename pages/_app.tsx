@@ -1,12 +1,13 @@
-import { ChainId, ThirdwebProvider, useChainId } from "@thirdweb-dev/react";
-import { Chain, Polygon, XdcApothemNetwork } from "@thirdweb-dev/chains";
+import { Chain, Polygon, XdcApothemNetwork, XdcNetwork } from "@thirdweb-dev/chains";
+import { ThirdwebProvider, useChainId } from "@thirdweb-dev/react";
 import type { AppProps } from "next/app";
-import "../styles/globals.css";
 import { useEffect, useState } from "react";
+import "../styles/globals.css";
 
 const supportedChains = [
   Polygon,
-  XdcApothemNetwork
+  XdcApothemNetwork,
+  XdcNetwork
 ];
 
 function MyApp({ Component, pageProps }: AppProps) {
