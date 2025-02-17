@@ -19,23 +19,29 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
+      - name: Debug Token Authentication
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          echo "Testing API token authentication..."
+          curl -H "Authorization: token $API_TOKEN_GITHUB" https://api.github.com/user
+
       - name: Clone target repository
         env:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
         run: |
-          # Clone the target repository
-          echo "API_TOKEN_GITHUB: $API_TOKEN_GITHUB"
-          git clone https://agurod42:$API_TOKEN_GITHUB@github.com/agurod42/epic-box.git target-repo
+          echo "Cloning target repository..."
+          git clone https://x-access-token:$API_TOKEN_GITHUB@github.com/agurod42/epic-box.git target-repo || exit 1
           cd target-repo
-          
-          # Add source repository as a remote
-          git remote add source-repo $GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git
-          
-          # Fetch the latest changes from source repo
-          git fetch source-repo main
 
-          # Merge changes from source repo into target repo
+          echo "Adding source repository as remote..."
+          git remote add source-repo https://github.com/${{ github.repository }}.git
+
+          echo "Fetching latest changes from source repository..."
+          git fetch source-repo main || exit 1
+
+          echo "Merging changes..."
           git merge --no-edit source-repo/main || git merge --abort
 
-          # Push the merged branch to the target repository
-          git push origin main
+          echo "Pushing merged branch..."
+          git push origin main || exit 1
