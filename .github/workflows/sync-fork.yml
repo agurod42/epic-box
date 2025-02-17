@@ -19,23 +19,16 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-      - name: Debug Token Authentication
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
-        run: |
-          echo "Testing API token authentication..."
-          curl -H "Authorization: token $API_TOKEN_GITHUB" https://api.github.com/user
-
       - name: Clone target repository
         env:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
         run: |
           echo "Cloning target repository..."
-          git clone https://x-access-token:$API_TOKEN_GITHUB@github.com/agurod42/epic-box.git target-repo || exit 1
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/agurod42/epic-box.git target-repo
           cd target-repo
 
-          echo "Adding source repository as remote..."
-          git remote add source-repo https://github.com/${{ github.repository }}.git
+          echo "Adding source repository with authentication..."
+          git remote add source-repo https://x-access-token:${API_TOKEN_GITHUB}@github.com/${{ github.repository }}.git
 
           echo "Fetching latest changes from source repository..."
           git fetch source-repo main || exit 1
