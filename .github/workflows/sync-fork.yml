@@ -1,0 +1,41 @@
+name: Push Branch to Other Repo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  push-to-fork:
+    runs-on: ubuntu-latest
+    if: github.repository == 'metasoccer/epic-box'
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Clone target repository
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          echo "Cloning target repository..."
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/agurod42/epic-box.git target-repo
+          cd target-repo
+
+          echo "Adding source repository with authentication..."
+          git remote add source-repo https://x-access-token:${API_TOKEN_GITHUB}@github.com/${{ github.repository }}.git
+
+          echo "Fetching latest changes from source repository..."
+          git fetch source-repo main || exit 1
+
+          echo "Merging changes..."
+          git merge --no-edit source-repo/main || git merge --abort
+
+          echo "Pushing merged branch..."
+          git push origin main || exit 1
