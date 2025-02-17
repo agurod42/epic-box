@@ -24,7 +24,7 @@ jobs:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
         run: |
           # Clone the target repository
-          git clone https://${API_TOKEN_GITHUB}@github.com/agurod42/epic-box.git target-repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/agurod42/epic-box.git target-repo
           cd target-repo
           
           # Add source repository as a remote
