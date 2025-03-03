@@ -1,15 +1,45 @@
 // This script mints a specified number of tokens to a given recipient address using the Ethereum blockchain.
-// Usage: node mintEpicBoxes.js <recipient_address> <amount>
+// Usage: node mintEpicBoxes.js <chain> <recipient_address> <amount>
 
 const fs = require('fs');
 const readline = require('readline');
 const { ethers } = require('ethers');
 
 // Constants
-const CONTRACT_ADDRESS = '0xB7F21E3A4B2B3fD8b897201a2Fb47A973c8E5A2c';
+const CHAINS = {
+  polygon: {
+    name: 'Polygon',
+    rpc: 'https://orbital-chaotic-mound.matic.quiknode.pro/c2c3bc5e54a59e13f0eac38b8e0d48ad7c790056',
+    contractAddress: '0xB7F21E3A4B2B3fD8b897201a2Fb47A973c8E5A2c'
+  },
+  xdc: {
+    name: 'XDC', 
+    rpc: 'https://earpc.xinfin.network',
+    contractAddress: '0x331936B75f6ebC061723e30B3A9AbD692d1cD460'
+  }
+};
+
 const PRIVATE_KEY_FILE = 'privateKey.txt';
 const TOKEN_URI = 'QmUz5hyETCGgd4xpFQvksi7JKGLEw684FxgYipfzTGHoTp';
 const ABI = [
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "tokenURI",
+        "type": "string"
+      }
+    ],
+    "name": "mintTo",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
   {
     "inputs": [
       {
@@ -55,20 +85,23 @@ async function getPrivateKey() {
 
 // Main function to mint the token
 async function main() {
-  const privateKey = await getPrivateKey();
-  const provider = new ethers.providers.JsonRpcProvider('https://orbital-chaotic-mound.matic.quiknode.pro/c2c3bc5e54a59e13f0eac38b8e0d48ad7c790056');
-  const wallet = new ethers.Wallet(privateKey);
-  const signer = wallet.connect(provider);
-  const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
   const args = process.argv.slice(2);
-  if (args.length !== 2) {
-    console.error('Usage: node mintEpicBoxes.js <recipient_address> <amount>');
+  if (args.length !== 3) {
+    console.error('Usage: node mintEpicBoxes.js <chain> <recipient_address> <amount>');
+    console.error('Supported chains: polygon, xdc');
     process.exit(1);
   }
 
-  const recipientAddress = args[0];
-  const amount = parseInt(args[1], 10);
+  const chainArg = args[0].toLowerCase();
+  const recipientAddress = args[1];
+  const amount = parseInt(args[2], 10);
+
+  if (!CHAINS[chainArg]) {
+    console.error('Invalid chain. Supported chains: polygon, xdc');
+    process.exit(1);
+  }
+
+  const chain = CHAINS[chainArg];
 
   if (!ethers.utils.isAddress(recipientAddress)) {
     console.error('Invalid recipient address.');
@@ -80,14 +113,27 @@ async function main() {
     process.exit(1);
   }
 
+  const privateKey = await getPrivateKey();
+  const provider = new ethers.providers.JsonRpcProvider(chain.rpc);
+  const wallet = new ethers.Wallet(privateKey);
+  const signer = wallet.connect(provider);
+  const contract = new ethers.Contract(chain.contractAddress, ABI, signer);
+
+  console.log(`Chain: ${chain.name}`);
+  console.log(`Contract Address: ${chain.contractAddress}`);
   console.log(`Minting ${amount} token(s) to: ${recipientAddress}`);
   console.log(`Using tokenURI: ${TOKEN_URI}`);
 
   try {
     const gasPrice = await provider.getGasPrice();
+
     for (let i = 0; i < amount; i++) {
-      const estimatedGasLimit = await contract.estimateGas.safeMint(recipientAddress, TOKEN_URI);
-      const tx = await contract.safeMint(recipientAddress, TOKEN_URI, {
+      const mintFunction = chainArg === 'polygon' ? 'safeMint' : 'mintTo';
+      const estimatedGasLimit = chainArg === 'polygon' 
+        ? await contract.estimateGas.safeMint(recipientAddress, TOKEN_URI)
+        : 300000;
+
+      const tx = await contract[mintFunction](recipientAddress, TOKEN_URI, {
         gasPrice: gasPrice,
         gasLimit: estimatedGasLimit
       });
