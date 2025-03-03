@@ -34,8 +34,8 @@ jobs:
           echo "Fetching latest changes from source repository..."
           git fetch source-repo main || exit 1
 
-          echo "Merging changes..."
-          git merge --no-edit source-repo/main || git merge --abort
+          echo "Resetting to source repository state..."
+          git reset --hard source-repo/main
 
-          echo "Pushing merged branch..."
-          git push origin main || exit 1
+          echo "Pushing changes..."
+          git push -f origin main || exit 1
