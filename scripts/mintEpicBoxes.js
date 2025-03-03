@@ -21,6 +21,8 @@ const CHAINS = {
 
 const PRIVATE_KEY_FILE = 'privateKey.txt';
 const TOKEN_URI = 'QmUz5hyETCGgd4xpFQvksi7JKGLEw684FxgYipfzTGHoTp';
+const WALLET_MIN_BALANCE = ethers.utils.parseEther('0.1');
+
 const ABI = [
   {
     "inputs": [
@@ -119,10 +121,19 @@ async function main() {
   const signer = wallet.connect(provider);
   const contract = new ethers.Contract(chain.contractAddress, ABI, signer);
 
+  // Check wallet balance
+  const balance = await signer.getBalance();
+  if (balance.lt(WALLET_MIN_BALANCE)) {
+    console.error(`Insufficient balance. Minimum required: 0.1 ${chain.name === 'XDC' ? 'XDC' : 'MATIC'}`);
+    process.exit(1);
+  }
+
+  const tokenUri = chainArg === 'xdc' ? `https://ipfs.io/ipfs/${TOKEN_URI}` : TOKEN_URI;
+
   console.log(`Chain: ${chain.name}`);
   console.log(`Contract Address: ${chain.contractAddress}`);
   console.log(`Minting ${amount} token(s) to: ${recipientAddress}`);
-  console.log(`Using tokenURI: ${TOKEN_URI}`);
+  console.log(`Using tokenURI: ${tokenUri}`);
 
   try {
     const gasPrice = await provider.getGasPrice();
@@ -130,10 +141,10 @@ async function main() {
     for (let i = 0; i < amount; i++) {
       const mintFunction = chainArg === 'polygon' ? 'safeMint' : 'mintTo';
       const estimatedGasLimit = chainArg === 'polygon' 
-        ? await contract.estimateGas.safeMint(recipientAddress, TOKEN_URI)
+        ? await contract.estimateGas.safeMint(recipientAddress, tokenUri)
         : 300000;
 
-      const tx = await contract[mintFunction](recipientAddress, TOKEN_URI, {
+      const tx = await contract[mintFunction](recipientAddress, tokenUri, {
         gasPrice: gasPrice,
         gasLimit: estimatedGasLimit
       });
