@@ -1,4 +1,4 @@
-import { ChainName, networkConfig } from "@playmetasoccer/constants";
+import { ChainName, networkConfig } from "@0xfutbol/constants";
 import {
   ConnectEmbed,
   ConnectWallet,
@@ -34,13 +34,6 @@ const CONTRACT_ADDRESSES = {
     OPENER: "0x15c1af32541F0AcC4fBD2012407599Bbec6Fd8e4",
     EPIC_BOX: "0x331936B75f6ebC061723e30B3A9AbD692d1cD460"
   },
-  51: { // XDC dev
-    LAND: "0x6555C9C746A6AC399aCb8016B5B7B4CfA1900af9",
-    PLAYER: "0xb06d1503afF4B8F744DE13226c65A2d7362a7b1B",
-    SCOUT: "0xa2A47D5F9436e111c8dEDC02890acf14E9F25D1a",
-    OPENER: "0x3454470C5564eE8d093084b1114c2C6F79Bf7607",
-    EPIC_BOX: "0xD3E94014563731e41E7Aed1f8b1f55DD7501271A"
-  },
   137: { // Polygon
     LAND: "0x1C80e3D799eBf28E47C488EcdABd7ea47B5d8595",
     PLAYER: "0x6f5D7bA06aD7B28319d86fceC09fae5bbC83d32F",
@@ -70,8 +63,24 @@ const getAssetType = (contractAddress: string, chainId: number) => {
   }
 };
 
-const getOpenSeaLink = (contractAddress: string, tokenId: string) => {
-  return `https://opensea.io/assets/matic/${contractAddress}/${tokenId}`;
+const getChainName = (chainId: number): ChainName => {
+  if (chainId === 137) {
+    return "polygon";
+  } else if (chainId === 50) {
+    return "xdc";
+  } else {
+    throw new Error(`Unsupported chainId: ${chainId}`);
+  }
+};
+
+const getOpenSeaLink = (chainId: number, contractAddress: string, tokenId: string) => {
+  if (chainId === 137) {
+    return `https://opensea.io/assets/matic/${contractAddress}/${tokenId}`;
+  } else if (chainId === 50) {
+    return `https://xdcscan.com/nft/${contractAddress}/${tokenId}`;
+  } else {
+    throw new Error(`Unsupported chainId: ${chainId}`);
+  }
 };
 
 const getPlayer = async (chainName: ChainName, nftTokenId: number): Promise<any> => {
@@ -366,11 +375,11 @@ const Home: NextPage = () => {
                               const decodedLog = epicBoxOpenerInterface.parseLog(log);
                               if (decodedLog.name === "PlayerMinted") {
                                 const playerId = decodedLog.args.playerId.toString();
-                                await fetchPlayerWithRetry("polygon", parseInt(playerId, 10));
+                                await fetchPlayerWithRetry(getChainName(chainId!), parseInt(playerId, 10));
                                 rewards.push({ tokenId: playerId, contractAddress: addresses.PLAYER });
                               } else if (decodedLog.name === "ScoutMinted") {
                                 const scoutId = decodedLog.args.scoutId.toString();
-                                await fetchScoutWithRetry("polygon", parseInt(scoutId, 10));
+                                await fetchScoutWithRetry(getChainName(chainId!), parseInt(scoutId, 10));
                                 rewards.push({ tokenId: scoutId, contractAddress: addresses.SCOUT });
                               } else if (decodedLog.name === "LandTicketTransferred") {
                                 const landTicketId = decodedLog.args.landTicketId.toString();
@@ -435,7 +444,7 @@ const Home: NextPage = () => {
                   <h3>{reward1Nft.metadata.name}</h3>
                   <p>{getAssetType(rewards[0].contractAddress, chainId!)}</p>
                   <a
-                    href={getOpenSeaLink(rewards[0].contractAddress, rewards[0].tokenId)}
+                    href={getOpenSeaLink(chainId!, rewards[0].contractAddress, rewards[0].tokenId)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -455,7 +464,7 @@ const Home: NextPage = () => {
                   <h3>{reward2Nft.metadata.name}</h3>
                   <p>{getAssetType(rewards[1].contractAddress, chainId!)}</p>
                   <a
-                    href={getOpenSeaLink(rewards[1].contractAddress, rewards[1].tokenId)}
+                    href={getOpenSeaLink(chainId!, rewards[1].contractAddress, rewards[1].tokenId)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -475,7 +484,7 @@ const Home: NextPage = () => {
                   <h3>{reward3Nft.metadata.name}</h3>
                   <p>{getAssetType(rewards[2].contractAddress, chainId!)}</p>
                   <a
-                    href={getOpenSeaLink(rewards[2].contractAddress, rewards[2].tokenId)}
+                    href={getOpenSeaLink(chainId!, rewards[2].contractAddress, rewards[2].tokenId)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
