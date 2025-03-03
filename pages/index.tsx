@@ -192,7 +192,7 @@ const fetchScoutWithRetry = async (
 const syncPlayer = async (chainName: ChainName, playerNftId: number): Promise<void> => {
   try {
     await axios.post(
-      "https://manag3r.metasoccer.com/api/2024/blockchain/syncPlayer",
+      "https://play.metasoccer.com/api/2024/blockchain/syncPlayer",
       {
         chainName,
         playerNftId,
@@ -213,7 +213,7 @@ const syncPlayer = async (chainName: ChainName, playerNftId: number): Promise<vo
 const syncScout = async (chainName: ChainName, scoutNftId: number): Promise<void> => {
   try {
     await axios.post(
-      "https://manag3r.metasoccer.com/api/2024/blockchain/syncScout",
+      "https://play.metasoccer.com/api/2024/blockchain/syncScout",
       {
         chainName,
         scoutNftId,
