@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@0xfutbol/constants@^1.0.20":
-  version "1.0.20"
-  resolved "https://registry.npmjs.org/@0xfutbol/constants/-/constants-1.0.20.tgz"
-  integrity sha512-eif5+LifjmWCBq0EWZH77PB9VYcvO745R/8wBhHRipbc83VnQOWqthQ2hy4+44/ftpkeK+r3sU1UCs3ZO2oHWw==
+"@0xfutbol/constants@^1.0.28":
+  version "1.0.28"
+  resolved "https://registry.npmjs.org/@0xfutbol/constants/-/constants-1.0.28.tgz"
+  integrity sha512-Qxmh6p9SUSbzNVlbAKCRIan+D5lCcVblHgELdDy+T8KUxgbwMJCEz9k7G+02IGHtrBZcEcbtc1UnkvD57xU0ZQ==
 
 "@account-abstraction/contracts@^0.5.0":
   version "0.5.0"
@@ -1209,6 +1209,11 @@
   version "12.3.4"
   resolved "https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-12.3.4.tgz"
   integrity sha512-DqsSTd3FRjQUR6ao0E1e2OlOcrF5br+uegcEGPVonKYJpcr0MJrtYmPxd4v5T6UCJZ+XzydF7eQo5wdGvSZAyA==
+
+"@next/swc-darwin-x64@12.3.4":
+  version "12.3.4"
+  resolved "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-12.3.4.tgz"
+  integrity sha512-PPF7tbWD4k0dJ2EcUSnOsaOJ5rhT3rlEt/3LhZUGiYNL8KvoqczFrETlUx0cUYaXe11dRA3F80Hpt727QIwByQ==
 
 "@noble/curves@~1.2.0", "@noble/curves@1.2.0":
   version "1.2.0"

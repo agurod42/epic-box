@@ -27,19 +27,26 @@ import styles from "../styles/Home.module.css";
 
 // Contract addresses by chain
 const CONTRACT_ADDRESSES = {
+  698: {
+    LAND: networkConfig.matchain.scLogs.MetaSoccerLand!.address,
+    PLAYER: networkConfig.matchain.scLogs.MetaSoccerPlayers!.address,
+    SCOUT: networkConfig.matchain.scLogs.YouthScouts!.address,
+    OPENER: networkConfig.matchain.scLogs.EpicBoxOpener!.address,
+    EPIC_BOX: networkConfig.matchain.scLogs.EpicBox!.address,
+  },
   50: { // XDC mainnet
-    LAND: "0x11D966323b04EA27318780FA5e2a0344F1Acc4C6",
-    PLAYER: "0x57dBF78C912a67aF7D170F1a247385AeA8E2D15B",
-    SCOUT: "0x2983a8654d3923f4ABADA00331865c9C06B5AaB4",
-    OPENER: "0x15c1af32541F0AcC4fBD2012407599Bbec6Fd8e4",
-    EPIC_BOX: "0x331936B75f6ebC061723e30B3A9AbD692d1cD460"
+    LAND: networkConfig.xdc.scLogs.MetaSoccerLand!.address,
+    PLAYER: networkConfig.xdc.scLogs.MetaSoccerPlayers!.address,
+    SCOUT: networkConfig.xdc.scLogs.YouthScouts!.address,
+    OPENER: networkConfig.xdc.scLogs.EpicBoxOpener!.address,
+    EPIC_BOX: networkConfig.xdc.scLogs.EpicBox!.address,
   },
   137: { // Polygon
-    LAND: "0x1C80e3D799eBf28E47C488EcdABd7ea47B5d8595",
-    PLAYER: "0x6f5D7bA06aD7B28319d86fceC09fae5bbC83d32F",
-    SCOUT: "0x94E42811Db93EF7831595b6fF9360491B987DFbD",
-    OPENER: "0x312cC0B8e2b2F81cef459f40F821fcDda6Ab4e67",
-    EPIC_BOX: "0xB7F21E3A4B2B3fD8b897201a2Fb47A973c8E5A2c"
+    LAND: networkConfig.polygon.scLogs.MetaSoccerLand!.address,
+    PLAYER: networkConfig.polygon.scLogs.MetaSoccerPlayers!.address,
+    SCOUT: networkConfig.polygon.scLogs.YouthScouts!.address,
+    OPENER: networkConfig.polygon.scLogs.EpicBoxOpener!.address,
+    EPIC_BOX: networkConfig.polygon.scLogs.EpicBox!.address,
   }
 };
 
@@ -64,7 +71,9 @@ const getAssetType = (contractAddress: string, chainId: number) => {
 };
 
 const getChainName = (chainId: number): ChainName => {
-  if (chainId === 137) {
+  if (chainId === 698) {
+    return "matchain";
+  } else if (chainId === 137) {
     return "polygon";
   } else if (chainId === 50) {
     return "xdc";
@@ -74,7 +83,9 @@ const getChainName = (chainId: number): ChainName => {
 };
 
 const getOpenSeaLink = (chainId: number, contractAddress: string, tokenId: string) => {
-  if (chainId === 137) {
+  if (chainId === 698) {
+    return `https://matchscan.io/nft/${contractAddress}/${tokenId}`;
+  } else if (chainId === 137) {
     return `https://opensea.io/assets/matic/${contractAddress}/${tokenId}`;
   } else if (chainId === 50) {
     return `https://xdcscan.com/nft/${contractAddress}/${tokenId}`;
