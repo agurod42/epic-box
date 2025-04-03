@@ -27,7 +27,14 @@ import styles from "../styles/Home.module.css";
 
 // Contract addresses by chain
 const CONTRACT_ADDRESSES = {
-  698: {
+  288: { // Boba Network
+    LAND: networkConfig.boba.scLogs.MetaSoccerLand!.address,
+    PLAYER: networkConfig.boba.scLogs.MetaSoccerPlayers!.address,
+    SCOUT: networkConfig.boba.scLogs.YouthScouts!.address,
+    OPENER: networkConfig.boba.scLogs.EpicBoxOpener!.address,
+    EPIC_BOX: networkConfig.boba.scLogs.EpicBox!.address,
+  },
+  698: { // Matchain
     LAND: networkConfig.matchain.scLogs.MetaSoccerLand!.address,
     PLAYER: networkConfig.matchain.scLogs.MetaSoccerPlayers!.address,
     SCOUT: networkConfig.matchain.scLogs.YouthScouts!.address,
@@ -71,7 +78,9 @@ const getAssetType = (contractAddress: string, chainId: number) => {
 };
 
 const getChainName = (chainId: number): ChainName => {
-  if (chainId === 698) {
+  if (chainId === 288) {
+    return "boba";
+  } else if (chainId === 698) {
     return "matchain";
   } else if (chainId === 137) {
     return "polygon";
@@ -83,7 +92,9 @@ const getChainName = (chainId: number): ChainName => {
 };
 
 const getOpenSeaLink = (chainId: number, contractAddress: string, tokenId: string) => {
-  if (chainId === 698) {
+  if (chainId === 288) {
+    return `https://bobascan.com/nft/${contractAddress}/${tokenId}`;
+  } else if (chainId === 698) {
     return `https://matchscan.io/nft/${contractAddress}/${tokenId}`;
   } else if (chainId === 137) {
     return `https://opensea.io/assets/matic/${contractAddress}/${tokenId}`;
@@ -408,6 +419,7 @@ const Home: NextPage = () => {
                         }
                       } catch (err: any) {
                         console.error("Error opening NFT:", err.message ?? "Unknown error");
+                        console.error("Error details:", err);
                         setIsOpening(false);
                       }
                     }}

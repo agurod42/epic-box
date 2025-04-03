@@ -7,6 +7,12 @@ const { ethers } = require('ethers');
 
 // Constants
 const CHAINS = {
+  boba: {
+    name: 'Boba Network',
+    symbol: 'ETH',
+    rpc: 'https://mainnet.boba.network',
+    contractAddress: '0x5d8963198C66BEDa41Fcbc9485323FaC749Dc38C',
+  },
   matchain: {
     name: 'Matchain',
     symbol: 'BNB',
@@ -132,7 +138,7 @@ async function main() {
   // Check wallet balance
   const balance = await signer.getBalance();
   if (balance.lt(WALLET_MIN_BALANCE)) {
-    console.error(`Insufficient balance. Minimum required: ${WALLET_MIN_BALANCE} ${chain.symbol}. Remember to add some ${chain.symbol} to ${wallet.address} to cover the gas fees.`);
+    console.error(`Insufficient balance. Minimum required: ${WALLET_MIN_BALANCE / 10 ** 18} ${chain.symbol}. Remember to add some ${chain.symbol} to ${wallet.address} to cover the gas fees.`);
     process.exit(1);
   }
 

@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@0xfutbol/constants@^1.0.28":
-  version "1.0.28"
-  resolved "https://registry.npmjs.org/@0xfutbol/constants/-/constants-1.0.28.tgz"
-  integrity sha512-Qxmh6p9SUSbzNVlbAKCRIan+D5lCcVblHgELdDy+T8KUxgbwMJCEz9k7G+02IGHtrBZcEcbtc1UnkvD57xU0ZQ==
+"@0xfutbol/constants@^1.0.30":
+  version "1.0.30"
+  resolved "https://registry.npmjs.org/@0xfutbol/constants/-/constants-1.0.30.tgz"
+  integrity sha512-5vYmSmPv860p4vmn0eDBHGqbZv0f2DaZKmmM64GqtLcq7K2ASFNjS8NXRT9fHXbHTMFtSNiKibPLlo6bMQRUew==
 
 "@account-abstraction/contracts@^0.5.0":
   version "0.5.0"

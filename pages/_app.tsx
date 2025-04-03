@@ -1,4 +1,4 @@
-import { Chain, Polygon, XdcNetwork } from "@thirdweb-dev/chains";
+import { BobaNetwork, Chain, Polygon, XdcNetwork } from "@thirdweb-dev/chains";
 import { ThirdwebProvider, useChainId } from "@thirdweb-dev/react";
 import type { AppProps } from "next/app";
 import { useEffect, useState } from "react";
@@ -6,6 +6,7 @@ import { Matchain } from "../chains/698";
 import "../styles/globals.css";
 
 const supportedChains = [
+  BobaNetwork,
   Matchain,
   Polygon,
   XdcNetwork
